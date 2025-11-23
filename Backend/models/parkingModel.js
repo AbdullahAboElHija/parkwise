@@ -1,104 +1,57 @@
 const mongoose = require("mongoose");
+const { Schema } = mongoose;
 
-const parkingSchema = new mongoose.Schema(
+
+// ==========================================
+// Parking Slot Schema (The Listing)
+// ==========================================
+const parkingSchema = new Schema(
   {
-    _id: {
-      type: String, // since your demo data uses "p1", "p2", "p3"
-      required: true,
-    },
+    owner: { type: Schema.Types.ObjectId, ref: 'User', required: true },
 
-    title: {
-      type: String,
-      required: [true, "A parking spot must have a title"],
-      trim: true,
-    },
+    // --- Display Info ---
+    name: { type: String, required: true, trim: true }, // e.g., "Downtown Secure Garage"
+    description: { type: String },
+    photos: [{ type: String }], // Array of URLs
 
-    ownerId: {
-      type: String,
-      required: [true, "Parking must belong to an owner"],
-    },
-
+    // --- Location (Critical for Map Search) ---
     address: {
-      type: String,
-      required: [true, "Address is required"],
-      trim: true,
+        street: String,
+        city: String,
+        state: String,
+        zip: String,
+        country: String
+    },
+    location: {
+        type: { type: String, default: 'Point', enum: ['Point'] },
+        coordinates: { type: [Number], required: true } // [Longitude, Latitude]
     },
 
-    coordinates: {
-      lat: {
-        type: Number,
-        required: [true, "Latitude is required"],
-      },
-      lng: {
-        type: Number,
-        required: [true, "Longitude is required"],
-      },
+    // --- Details & Features ---
+    parkingType: {
+        type: String,
+        enum: ['Driveway', 'Garage', 'Street', 'Lot', 'Basement'],
+        required: true
     },
+    features: [{ type: String }], // e.g., ["CCTV", "Covered", "EV Charging", "Gated"]
+    tags: [{ type: String }], // e.g., ["Cheap", "Near Airport", "Instant Book"]
 
-    price: {
-      hour: {
-        type: Number,
-        required: [true, "Hourly price is required"],
-      },
-      day: {
-        type: Number,
-        required: false,
-      },
-      month: {
-        type: Number,
-        required: false,
-      },
-    },
+    // --- Pricing ---
+    pricePerDay: { type: Number, required: true },
+    currency: { type: String, default: 'USD' },
 
-    type: {
-      type: String,
-      enum: ["covered", "open", "underground"],
-      required: true,
-    },
+    // --- Stats (For Search & Owner Dashboard) ---
+    averageRating: { type: Number, default: 0, min: 0, max: 5 },
+    reviewCount: { type: Number, default: 0 },
+    totalBookings: { type: Number, default: 0 },
 
-    evCharger: {
-      type: Boolean,
-      default: false,
-    },
+    isActive: { type: Boolean, default: true }, // Owner can toggle visibility
 
-    accessible: {
-      type: Boolean,
-      default: false,
-    },
+    createdAt: { type: Date, default: Date.now }
+});
 
-    isInstantBooking: {
-      type: Boolean,
-      default: false,
-    },
+// Create 2dsphere index for location-based searching
+parkingSchema.index({ location: '2dsphere' });
 
-    width: {
-      type: Number,
-      required: false,
-    },
-
-    length: {
-      type: Number,
-      required: false,
-    },
-
-    images: {
-      type: [String], // array of URLs
-      default: [],
-    },
-
-    rules: {
-      type: String,
-      default: "",
-    },
-
-    availability: {
-      type: String, // e.g., "24/7" or "08:00 - 23:00"
-      default: "24/7",
-    },
-  },
-  {
-    timestamps: true, // adds createdAt + updatedAt automatically
-  }
-);
 
 module.exports = mongoose.model("Parking", parkingSchema);
