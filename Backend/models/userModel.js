@@ -5,6 +5,9 @@ const { Schema } = mongoose;
 // User Schema
 // ==========================================
 const userSchema = new Schema({
+    
+    
+    
     // --- Auth & Basic Info ---
     fullName: { type: String, required: true, trim: true },
     email: { type: String, required: true, unique: true, lowercase: true },
@@ -12,8 +15,13 @@ const userSchema = new Schema({
     phoneNumber: { type: String, required: true },
     isVerified: { type: Boolean, default: false },
 
+
+    
     // --- Profile Image ---
     avatarUrl: { type: String },
+
+
+
 
     // --- Payment Info ---
     // DO NOT store raw card details. Store the token/ID from Stripe/PayPal
@@ -27,6 +35,8 @@ const userSchema = new Schema({
     // --- Renter Stats (Booking History) ---
     // We reference the Booking model, but we don't need to embed the whole history here.
     // We can query Bookings where { renter: user._id }
+
+
 
     // --- Owner Stats (Dashboard Data) ---
     // We keep these here for fast dashboard rendering

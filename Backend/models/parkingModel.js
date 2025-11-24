@@ -7,12 +7,18 @@ const { Schema } = mongoose;
 // ==========================================
 const parkingSchema = new Schema(
   {
+    
     owner: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+
+
 
     // --- Display Info ---
     name: { type: String, required: true, trim: true }, // e.g., "Downtown Secure Garage"
     description: { type: String },
     photos: [{ type: String }], // Array of URLs
+
+
+
 
     // --- Location (Critical for Map Search) ---
     address: {
@@ -27,6 +33,9 @@ const parkingSchema = new Schema(
         coordinates: { type: [Number], required: true } // [Longitude, Latitude]
     },
 
+
+
+
     // --- Details & Features ---
     parkingType: {
         type: String,
@@ -36,9 +45,15 @@ const parkingSchema = new Schema(
     features: [{ type: String }], // e.g., ["CCTV", "Covered", "EV Charging", "Gated"]
     tags: [{ type: String }], // e.g., ["Cheap", "Near Airport", "Instant Book"]
 
+
+
+
     // --- Pricing ---
     pricePerDay: { type: Number, required: true },
     currency: { type: String, default: 'USD' },
+
+
+
 
     // --- Stats (For Search & Owner Dashboard) ---
     averageRating: { type: Number, default: 0, min: 0, max: 5 },
