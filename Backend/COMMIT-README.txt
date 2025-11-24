@@ -20,5 +20,13 @@ Example endpoint:
 
     * Notice that there is no : mark in the actual use case.
 
+
+
+* Note: be careful when using populator.js as it now does not clear old
+data, which if ran multiple times will produce duplicate data (id will be different of course),
+but if you comment out the "Clear Data" section, it will hard delete both
+parkings and users tables. (No need to use it)
+
+
 Good night <3
 
