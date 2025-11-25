@@ -3,10 +3,14 @@ const validator = require("validator");
 const bcrypt = require("bcrypt");
 
 const userSchema = new mongoose.Schema({
-  _id: {
-    type: String, // assuming user IDs are strings like "999999999", "u2"
-    required: true,
-  },
+  // MONGO DB AUTOMATICALLY ASSIGNS ObjectID as _id field for entries in table 
+  // (more efficiency too for indexing)
+  // _id: {
+  //   type: String, // assuming user IDs are strings like "999999999", "u2"
+  //   required: true,
+  // },
+
+  
   name: {
     type: String,
     required: [true, "A user must have a name"],

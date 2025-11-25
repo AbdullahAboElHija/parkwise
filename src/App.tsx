@@ -9,6 +9,7 @@ import Signup from "./pages/Signup";
 import Search from "./pages/Search";
 import ParkingDetails from "./pages/ParkingDetails";
 import Dashboard from "./pages/Dashboard";
+import AddListing from "./pages/AddListing";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 
@@ -27,7 +28,8 @@ const App = () => (
           <Route path="/search" element={<Search />} />
           <Route path="/parking/:id" element={<ParkingDetails />} />
           <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/profile" element={<Profile />} />
+          <Route path="/dashboard/add-listing" element={<AddListing />} />
+          <Route path="/profile" element={<Profile />} />          
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

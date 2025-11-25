@@ -7,7 +7,7 @@ exports.signUp = async (req, res) => {
   try {
 
     const newUser = await User.create({
-      _id: req.body._id,
+      // _id: req.body._id,
       name: req.body.name,
       lastName: req.body.lastName,
       email: req.body.email,

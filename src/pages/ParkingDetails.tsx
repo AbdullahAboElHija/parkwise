@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
 import { Avatar } from "@/components/ui/avatar";
+import { useToast } from "@/components/ui/use-toast";
 import {
   MapPin,
   Star,
@@ -17,47 +18,198 @@ import {
   ArrowLeft,
   User,
   MessageCircle,
+  Loader2,
 } from "lucide-react";
 import coveredParking from "@/assets/parking-covered.jpg";
 
-const ParkingDetails = () => {
-  const { id } = useParams();
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+// --- 1. Interface for FINAL CORRECT API Response Data ---
+interface ApiParkingData {
+    _id: string;
+    owner: string; 
+    name: string;
+    description: string;
+    photos: string[]; 
+    address: { 
+        street: string; 
+        city: string; 
+        region: string; // Corrected: Using 'region'
+        zip: string;
+    };
+    prices: { 
+        hourly: number; 
+        daily?: number; 
+        monthly?: number; 
+    }; // Corrected: Nested prices object
+    parkingType: string;
+    features: string[]; 
+    currency: string;
+    averageRating: number;
+    reviewCount: number;
+    totalBookings: number;
+    isActive: boolean;
+}
 
-  const parkingData = {
-    id: "1",
-    title: "Private Covered Parking Near Azrieli",
-    location: "Tel Aviv Center, Israel",
-    images: [coveredParking, coveredParking, coveredParking],
-    price: 45,
-    priceHourly: 8,
-    priceMonthly: 900,
-    rating: 4.8,
-    reviews: 127,
-    description:
-      "Secure covered parking spot in the heart of Tel Aviv, just 2 minutes walk from Azrieli Center. Perfect for daily commuters and visitors. The spot is spacious and easily accessible.",
-    features: [
-      { icon: Shield, label: "24/7 Security" },
-      { icon: Camera, label: "CCTV" },
-      { icon: Zap, label: "EV Ready" },
-      { icon: Wifi, label: "Gate Code Access" },
-    ],
+// --- 2. Interface for Component Render Data (Matches UI structure) ---
+interface RenderParkingData {
+    id: string;
+    title: string;
+    location: string;
+    images: string[];
+    price: number; 
+    priceHourly: number; 
+    priceMonthly: number; 
+    currency: string;
+    rating: number;
+    reviews: number;
+    description: string;
+    features: { icon: React.ElementType; label: string }[];
     specifications: {
-      covered: true,
-      width: "2.5m",
-      length: "5m",
-      height: "2.1m",
-      surface: "Paved",
-      access: "24/7",
+        covered: boolean;
+        width: string; 
+        length: string; 
+        height: string; 
+        surface: string; 
+        access: string; 
+    };
+    owner: {
+        name: string; 
+        joined: string; 
+        reviews: number; 
+        rating: number; 
+    };
+}
+
+// Map feature strings from the API to displayable icons/labels
+const featureIconMap: { [key: string]: { icon: React.ElementType; label: string } } = {
+    "cctv": { icon: Camera, label: "CCTV" },
+    "covered": { icon: Shield, label: "Covered" },
+    "ev charging": { icon: Zap, label: "EV Ready" },
+    "gated": { icon: Wifi, label: "Gated Access" }, 
+    "24/7 access": { icon: Clock, label: "24/7 Access" },
+    "driveway": { icon: MapPin, label: "Driveway Spot" } // Example: You might map parkingType too
+};
+
+// Default data structure to avoid errors before loading
+const defaultParkingData: RenderParkingData = {
+    id: "",
+    title: "Loading Parking Spot...",
+    location: "Unknown Location",
+    images: [coveredParking, coveredParking, coveredParking, coveredParking],
+    price: 0,
+    priceHourly: 0,
+    priceMonthly: 0,
+    currency: "ILS",
+    rating: 0,
+    reviews: 0,
+    description: "Loading description...",
+    features: [],
+    specifications: {
+        covered: false,
+        width: "N/A",
+        length: "N/A",
+        height: "N/A",
+        surface: "N/A",
+        access: "N/A",
     },
     owner: {
-      name: "David Cohen",
-      joined: "2022",
-      reviews: 45,
-      rating: 4.9,
+        name: "Host",
+        joined: "N/A",
+        reviews: 0,
+        rating: 0,
     },
-  };
+};
 
+const ParkingDetails: React.FC = () => {
+  const { id } = useParams<{ id: string }>();
+  const [parkingData, setParkingData] = useState<RenderParkingData>(defaultParkingData);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+  
+  const { toast } = useToast();
+
+  // --- Data Fetching Logic ---
+  useEffect(() => {
+    if (!id) return;
+
+    const fetchDetails = async () => {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const response = await fetch(`/api/v1/parkings/${id}`);
+        const result = await response.json();
+
+        if (!response.ok || result.status !== 'success') {
+          throw new Error(result.message || "Failed to fetch parking details.");
+        }
+        
+        const apiData: ApiParkingData = result.data;
+
+        // --- MAPPING API DATA TO RENDER DATA ---
+        const isCovered = apiData.features.some(f => f.toLowerCase() === 'covered');
+        
+        const mappedData: RenderParkingData = {
+            id: apiData._id,
+            title: apiData.name,
+            // Use City and Region for the display location
+            location: `${apiData.address.city}, ${apiData.address.region}`,
+            images: apiData.photos.length > 0 ? apiData.photos : defaultParkingData.images,
+            
+            // Prices are now correctly pulled from the nested object
+            price: apiData.prices.daily || apiData.prices.hourly * 24, // Main display is daily
+            priceHourly: apiData.prices.hourly,
+            priceMonthly: apiData.prices.monthly || 0,
+            currency: apiData.currency,
+
+            rating: apiData.averageRating,
+            reviews: apiData.reviewCount,
+            description: apiData.description,
+            
+            // Map features
+            features: apiData.features
+                .map(f => featureIconMap[f.toLowerCase()])
+                .filter((f): f is { icon: React.ElementType; label: string } => !!f),
+            
+            specifications: {
+                covered: isCovered,
+                // Specifications are hardcoded/placeholders until you add them to the schema/API
+                width: "2.5m", 
+                length: "5m",
+                height: isCovered ? "2.1m" : "N/A", // Assume height is only relevant for covered spots
+                surface: apiData.parkingType, // Reusing parkingType as surface
+                access: apiData.features.includes("24/7 Access") ? "24/7" : "Limited", 
+            },
+            
+            // Owner is still placeholder until you integrate the owner object population
+            owner: {
+                name: "David Cohen", 
+                joined: "2022", 
+                reviews: 45, 
+                rating: 4.9, 
+            },
+        };
+
+        setParkingData(mappedData);
+
+      } catch (err: any) {
+        console.error("Error fetching parking details:", err);
+        setError(err.message || "Could not load parking spot details.");
+        toast({
+            variant: "destructive",
+            title: "Data Error",
+            description: err.message || "Failed to load parking spot.",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchDetails();
+  }, [id, toast]); 
+
+  // --- Hardcoded Reviews List (Retained for UI display) ---
+  // TODO Fetching
   const reviewsList = [
     {
       id: 1,
@@ -81,6 +233,38 @@ const ParkingDetails = () => {
       comment: "Good parking spot, slightly tight for larger vehicles but overall excellent.",
     },
   ];
+  
+  // --- Conditional Rendering for Loading and Error States ---
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-10 w-10 animate-spin text-primary mr-3" />
+        <h1 className="text-xl text-foreground">Loading details...</h1>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background p-8">
+        <Navbar />
+        <div className="container mx-auto px-4 py-8 text-center">
+            <h1 className="text-3xl font-bold text-red-500 mb-4">Error Loading Parking Spot</h1>
+            <p className="text-muted-foreground mb-6">{error}</p>
+            <Link to="/search">
+              <Button>
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Return to Search
+              </Button>
+            </Link>
+        </div>
+      </div>
+    );
+  }
+
+  // --- Main Render Content (Now uses fetched data) ---
+  const serviceFee = 5;
+  const totalCost = parkingData.price + serviceFee;
 
   return (
     <div className="min-h-screen bg-background">
@@ -104,30 +288,24 @@ const ParkingDetails = () => {
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <img
-              src={parkingData.images[1]}
-              alt="Parking view 2"
-              className="w-full h-[196px] object-cover"
-            />
-            <img
-              src={parkingData.images[2]}
-              alt="Parking view 3"
-              className="w-full h-[196px] object-cover"
-            />
-            <div className="col-span-2 relative">
-              <img
-                src={parkingData.images[0]}
-                alt="Parking view 4"
-                className="w-full h-[196px] object-cover"
-              />
-              <Button
-                variant="secondary"
-                className="absolute bottom-4 right-4"
-                size="sm"
-              >
-                View All Photos
-              </Button>
-            </div>
+            {parkingData.images.slice(1, 4).map((imgUrl, index) => (
+                <div key={index} className={index === 2 ? "col-span-2 relative" : ""}>
+                    <img
+                        src={imgUrl}
+                        alt={`Parking view ${index + 2}`}
+                        className="w-full h-[196px] object-cover"
+                    />
+                    {index === 2 && ( 
+                        <Button
+                            variant="secondary"
+                            className="absolute bottom-4 right-4"
+                            size="sm"
+                        >
+                            View All Photos
+                        </Button>
+                    )}
+                </div>
+            ))}
           </div>
         </div>
 
@@ -147,7 +325,7 @@ const ParkingDetails = () => {
                     </div>
                     <div className="flex items-center gap-1">
                       <Star className="h-4 w-4 fill-warning text-warning" />
-                      <span className="font-medium text-foreground">{parkingData.rating}</span>
+                      <span className="font-medium text-foreground">{parkingData.rating.toFixed(1)}</span>
                       <span>({parkingData.reviews} reviews)</span>
                     </div>
                   </div>
@@ -156,28 +334,34 @@ const ParkingDetails = () => {
                   {parkingData.specifications.covered && (
                     <Badge variant="accent">Covered</Badge>
                   )}
-                  <Badge variant="success">
-                    <Zap className="h-3 w-3 mr-1" />
-                    EV Ready
-                  </Badge>
+                  {parkingData.features.some(f => f.label === 'EV Ready') && (
+                    <Badge variant="success">
+                      <Zap className="h-3 w-3 mr-1" />
+                      EV Ready
+                    </Badge>
+                  )}
                 </div>
               </div>
 
-              <p className="text-muted-foreground">{parkingData.description}</p>
+              <p className="text-muted-foreground">{parkingData.description || "No description provided."}</p>
             </div>
 
             {/* Features */}
             <Card className="p-6">
               <h2 className="text-xl font-semibold mb-4 text-foreground">Features</h2>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {parkingData.features.map((feature, index) => (
-                  <div key={index} className="flex flex-col items-center text-center gap-2">
-                    <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                      <feature.icon className="h-6 w-6" />
-                    </div>
-                    <span className="text-sm text-muted-foreground">{feature.label}</span>
-                  </div>
-                ))}
+                {parkingData.features.length > 0 ? (
+                    parkingData.features.map((feature, index) => (
+                      <div key={index} className="flex flex-col items-center text-center gap-2">
+                        <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                          <feature.icon className="h-6 w-6" />
+                        </div>
+                        <span className="text-sm text-muted-foreground">{feature.label}</span>
+                      </div>
+                    ))
+                ) : (
+                    <p className="text-muted-foreground col-span-4">No special features listed.</p>
+                )}
               </div>
             </Card>
 
@@ -255,7 +439,7 @@ const ParkingDetails = () => {
                 <h2 className="text-xl font-semibold text-foreground">Reviews</h2>
                 <div className="flex items-center gap-2">
                   <Star className="h-5 w-5 fill-warning text-warning" />
-                  <span className="text-lg font-semibold">{parkingData.rating}</span>
+                  <span className="text-lg font-semibold">{parkingData.rating.toFixed(1)}</span>
                   <span className="text-muted-foreground">
                     ({parkingData.reviews} reviews)
                   </span>
@@ -291,16 +475,16 @@ const ParkingDetails = () => {
               <div>
                 <div className="flex items-baseline gap-2 mb-4">
                   <span className="text-3xl font-bold text-primary">
-                    ₪{parkingData.price}
+                    {parkingData.currency}{parkingData.price}
                   </span>
                   <span className="text-muted-foreground">/day</span>
                 </div>
                 <div className="flex gap-4 text-sm text-muted-foreground">
                   <div>
                     <Clock className="h-4 w-4 inline mr-1" />
-                    ₪{parkingData.priceHourly}/hour
+                    {parkingData.currency}{parkingData.priceHourly}/hour
                   </div>
-                  <div>₪{parkingData.priceMonthly}/month</div>
+                  {parkingData.priceMonthly > 0 && <div>{parkingData.currency}{parkingData.priceMonthly}/month</div>}
                 </div>
               </div>
 
@@ -318,16 +502,16 @@ const ParkingDetails = () => {
 
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">₪{parkingData.price} × 1 day</span>
-                  <span className="text-foreground">₪{parkingData.price}</span>
+                  <span className="text-muted-foreground">{parkingData.currency}{parkingData.price} × 1 day</span>
+                  <span className="text-foreground">{parkingData.currency}{parkingData.price}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Service fee</span>
-                  <span className="text-foreground">₪5</span>
+                  <span className="text-foreground">{parkingData.currency}{serviceFee}</span>
                 </div>
                 <div className="border-t border-border pt-2 flex justify-between font-semibold">
                   <span className="text-foreground">Total</span>
-                  <span className="text-foreground">₪{parkingData.price + 5}</span>
+                  <span className="text-foreground">{parkingData.currency}{totalCost}</span>
                 </div>
               </div>
 

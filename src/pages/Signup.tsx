@@ -52,7 +52,6 @@ const Signup = () => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          _id: formData._id,
           name: formData.name,
           lastName: formData.lastName,
           email: formData.email,
