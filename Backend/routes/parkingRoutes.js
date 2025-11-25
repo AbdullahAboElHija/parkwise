@@ -1,7 +1,87 @@
 const express = require("express");
 const parkingController = require("./../controllers/parkingController");
+const authController = require("../controllers/authController");
 
 const router = express.Router();
 
-router.route("/").get(parkingController.getAllParkings);
+
+// 1. PUBLIC / RENTER ROUTES
+
+/**
+ * @route GET /api/v1/parkings/top-rated
+ * @description Get the top 5 highest-rated active parking slots.
+ * @access Public
+ */
+router.route("/top-rated")
+    .get(parkingController.getTopRatedParkings);
+
+
+/**
+ * @route /api/v1/parkings
+ */
+router.route("/")
+    /**
+     * @route GET /api/v1/parkings
+     * @description Search for and retrieve all active parking slots. Supports GeoJSON and filtering via query parameters.
+     * @access Public
+     */
+    .get(parkingController.getAllParkings)
+    
+    /**
+     * @route POST /api/v1/parkings
+     * @description Create a new parking listing. The owner field is automatically set to the authenticated user's ID.
+     * @access Owner (Requires Authentication)
+     */
+    .post(
+        authController.protect, 
+        parkingController.createParking
+    );
+
+
+/* 2. OWNER MANAGEMENT & SINGLE RESOURCE */
+
+/**
+ * @route GET /api/v1/parkings/my-listings
+ * @description Get all parking listings owned by the logged-in user.
+ * @access Owner (Requires Authentication)
+ */
+ router.route("/my-listings")
+    .get(
+        authController.protect, 
+        parkingController.getOwnerParkings
+    );
+
+
+/**
+ * @route /api/v1/parkings/:id
+ */
+router.route("/:id")
+
+    /**
+     * @route GET /api/v1/parkings/:id
+     * @description Retrieve the details of a single parking slot by its ID.
+     * @access Public
+     */
+    .get(parkingController.getParking) 
+
+    /**
+     * @route PATCH /api/v1/parkings/:id
+     * @description Update a specific parking listing. Requires the user to be the owner of the listing.
+     * @access Owner (Requires Authentication & Authorization)
+     */
+    .patch(
+        authController.protect, 
+        parkingController.updateParking
+    )
+
+    /**
+     * @route DELETE /api/v1/parkings/:id
+     * @description Deactivate (soft delete) a parking listing. Requires the user to be the owner of the listing.
+     * @access Owner (Requires Authentication & Authorization)
+     */
+    .delete(
+        authController.protect,
+        parkingController.deleteParking
+    );
+
 module.exports = router;
