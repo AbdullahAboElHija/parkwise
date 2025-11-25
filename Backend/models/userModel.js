@@ -1,55 +1,53 @@
 const mongoose = require("mongoose");
-const { Schema } = mongoose;
+const validator = require("validator");
+const bcrypt = require("bcrypt");
 
-// ==========================================
-// User Schema
-// ==========================================
-const userSchema = new Schema({
-    
-    
-    
-    // --- Auth & Basic Info ---
-    fullName: { type: String, required: true, trim: true },
-    email: { type: String, required: true, unique: true, lowercase: true },
-    password: { type: String, required: true, select: false }, // Hash this before saving
-    phoneNumber: { type: String, required: true },
-    isVerified: { type: Boolean, default: false },
+const userSchema = new mongoose.Schema({
+  _id: {
+    type: String, // assuming user IDs are strings like "999999999", "u2"
+    required: true,
+  },
+  name: {
+    type: String,
+    required: [true, "A user must have a name"],
+  },
+  lastName: {
+    type: String,
+    required: [true, "A user must have a last name"],
+  },
+  email: {
+    type: String,
+    required: [true, "A user must have an email"],
+    lowercase: true,
+    unique: true,
+    validate: [validator.isEmail, "Please provide a valid email address"],
+  },
+  password: {
+    type: String,
+    required: [true, "A user must have a password"],
+    minlength: [8, "Password must be at least 8 characters long"],
+    select: false,
+  },
+  passwordConfirm: {
+    type: String,
+    required: [true, "Please confirm your password"],
+    select: false,
+  },
+});
 
+userSchema.pre('save', async function () {
+  // Only run this function if password was actually modified
+  if (!this.isModified('password')) return;
 
-    
-    // --- Profile Image ---
-    avatarUrl: { type: String },
+  // Hash the password with cost of 12
+  this.password = await bcrypt.hash(this.password, 12);
 
-
-
-
-    // --- Payment Info ---
-    // DO NOT store raw card details. Store the token/ID from Stripe/PayPal
-    stripeCustomerId: { type: String },
-    paymentMethods: [{
-        provider: { type: String, default: 'Stripe' },
-        last4: String,
-        token: String
-    }],
-
-    // --- Renter Stats (Booking History) ---
-    // We reference the Booking model, but we don't need to embed the whole history here.
-    // We can query Bookings where { renter: user._id }
-
-
-
-    // --- Owner Stats (Dashboard Data) ---
-    // We keep these here for fast dashboard rendering
-    ownerStats: {
-        totalEarnings: { type: Number, default: 0 },
-        totalBookingsReceived: { type: Number, default: 0 },
-        activeListingsCount: { type: Number, default: 0 },
-        averageOwnerRating: { type: Number, default: 0, min: 0, max: 5 },
-        reviewCount: { type: Number, default: 0 }
-    },
-
-    createdAt: { type: Date, default: Date.now }
+  // Delete passwordConfirm field
+  this.passwordConfirm = undefined;
 });
 
 
-module.exports = mongoose.model("users", userSchema);
+
+const User = mongoose.model("User", userSchema);
+
+module.exports = User;

@@ -24,9 +24,8 @@ const parkingSchema = new Schema(
     address: {
         street: String,
         city: String,
-        state: String,
+        region: String,
         zip: String,
-        country: String
     },
     location: {
         type: { type: String, default: 'Point', enum: ['Point'] },
@@ -49,7 +48,7 @@ const parkingSchema = new Schema(
 
 
     // --- Pricing ---
-    pricePerDay: { type: Number, required: true },
+    prices: { hourly: Number, daily: Number, monthly:Number},
     currency: { type: String, default: 'USD' },
 
 

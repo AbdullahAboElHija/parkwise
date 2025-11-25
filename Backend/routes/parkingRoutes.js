@@ -1,8 +1,6 @@
 const express = require("express");
 const parkingController = require("./../controllers/parkingController");
-
-// The authController is referenced here as a reminder for future implementation.
-// For now, we use parkingController.mockProtect for temporary testing.
+const authController = require("../controllers/authController");
 
 const router = express.Router();
 
@@ -35,7 +33,7 @@ router.route("/")
      * @access Owner (Requires Authentication)
      */
     .post(
-        parkingController.mockProtect, // TEMP: Simulates authController.protect
+        authController.protect, 
         parkingController.createParking
     );
 
@@ -49,7 +47,7 @@ router.route("/")
  */
  router.route("/my-listings")
     .get(
-        parkingController.mockProtect, // TEMP: Simulates authController.protect
+        authController.protect, 
         parkingController.getOwnerParkings
     );
 
@@ -72,7 +70,7 @@ router.route("/:id")
      * @access Owner (Requires Authentication & Authorization)
      */
     .patch(
-        parkingController.mockProtect, // TEMP: Simulates authController.protect
+        authController.protect, 
         parkingController.updateParking
     )
 
@@ -82,7 +80,7 @@ router.route("/:id")
      * @access Owner (Requires Authentication & Authorization)
      */
     .delete(
-        parkingController.mockProtect, // TEMP: Simulates authController.protect
+        authController.protect,
         parkingController.deleteParking
     );
 

@@ -1,15 +1,6 @@
 const Parking = require("../models/parkingModel");
 
-// FOR TESTING PURPOSES ONLY
-// REMOVE WHEN AUTHENTICATION IS IMPLEMENTED
-const MOCK_OWNER_ID = '66a6a02b1234567890abcdef';
 
-exports.mockProtect = (req, res, next) => {
-    // 1. Manually inject the user object onto the request
-    req.user = { id: MOCK_OWNER_ID }; 
-    // 2. Continue to the next controller function
-    next(); 
-};
 // Helper function to handle common error responses
 const sendError = (res, statusCode, message, err) => {
     console.error(message, err ? err : "");
