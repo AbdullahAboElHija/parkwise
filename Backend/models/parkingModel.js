@@ -48,8 +48,21 @@ const parkingSchema = new Schema(
 
 
     // --- Pricing ---
-    prices: { hourly: Number, daily: Number, monthly:Number},
-    currency: { type: String, default: 'USD' },
+    prices: {
+      hourly: {
+        type: Number,
+        required: [true, "Hourly price is required"],
+      },
+      daily: {
+        type: Number,
+        required: false,
+      },
+      monthly: {
+        type: Number,
+        required: false,
+      },
+    },
+    currency: { type: String, default: 'ILS' },
 
 
 
